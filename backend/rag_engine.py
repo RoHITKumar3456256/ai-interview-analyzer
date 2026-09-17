@@ -57,6 +57,62 @@ class RAGEngine:
             except Exception as e:
                 logger.warning(f"Could not initialize OpenAI: {e}")
 
+    def update_gemini_key(self, new_key: str) -> bool:
+        """Dynamically update and configure Gemini API Key at runtime."""
+        new_key = new_key.strip()
+        if not new_key:
+            self.gemini_available = False
+            return False
+        settings.GEMINI_API_KEY = new_key
+        try:
+            import google.generativeai as legacy_genai
+            legacy_genai.configure(api_key=new_key)
+            self.gemini_client = legacy_genai
+            self.gemini_available = True
+            logger.info("Gemini API configured with new key.")
+            return True
+        except Exception as e:
+            logger.warning(f"Failed to configure Gemini with new key: {e}")
+            return False
+
+    def test_gemini_connection(self) -> Dict[str, Any]:
+        """Test Gemini API connection with the currently active key."""
+        if not self.gemini_available or not hasattr(self, 'gemini_client'):
+            return {"status": "inactive", "message": "No active Gemini API key configured."}
+        try:
+            model = self.gemini_client.GenerativeModel("gemini-1.5-flash")
+            resp = model.generate_content("Ping")
+            if resp and resp.text:
+                return {"status": "connected", "message": "Gemini 1.5 Flash live and responsive!", "provider": "gemini-1.5-flash"}
+        except Exception as e:
+            err_msg = str(e)
+            if "401" in err_msg or "UNAUTHENTICATED" in err_msg:
+                return {
+                    "status": "auth_error", 
+                    "message": "Authentication failed. Note: Google AI Studio keys typically start with 'AIzaSy...'. Please verify your key.",
+                    "details": err_msg[:120]
+                }
+            return {"status": "error", "message": f"Connection notice: {err_msg[:120]}"}
+        return {"status": "unknown", "message": "Unable to verify Gemini connection."}
+
+    def generate_with_gemini(self, prompt: str, system_prompt: str = "") -> Optional[str]:
+        """Execute real-time generation via Gemini with strict fallback."""
+        if not self.gemini_available or not hasattr(self, 'gemini_client'):
+            return None
+        try:
+            if hasattr(self.gemini_client, 'GenerativeModel'):
+                model = self.gemini_client.GenerativeModel(
+                    model_name="gemini-1.5-flash",
+                    system_instruction=system_prompt if system_prompt else None
+                )
+                resp = model.generate_content(prompt)
+                if resp and resp.text:
+                    return resp.text.strip()
+        except Exception as e:
+            logger.warning(f"Live Gemini call encountered exception: {e}")
+            return None
+        return None
+
     def get_active_provider(self) -> str:
         if settings.DEFAULT_LLM_PROVIDER == "gemini" and self.gemini_available:
             return "gemini-1.5-pro"
@@ -477,12 +533,29 @@ class RAGEngine:
 
     def _synthesize_chat_answer(self, query: str, chunks: List[DocumentChunk], quotes: List[EvidenceQuote]) -> str:
         expert_chunks: Dict[str, List[str]] = {}
+        context_snippets: List[str] = []
         for c in chunks:
             if "Interviewer" not in c.metadata.speaker:
                 spk = c.metadata.speaker
                 if spk not in expert_chunks:
                     expert_chunks[spk] = []
                 expert_chunks[spk].append(c.text)
+                context_snippets.append(f"[{c.metadata.speaker} ({c.metadata.organization}) at {c.metadata.timestamp_display}]: {c.text}")
+
+        # Real-time Gemini LLM Generation attempt
+        if self.gemini_available and context_snippets:
+            prompt = (
+                f"You are a rigorous AI qualitative researcher. Based ONLY on the verified transcript snippets below, "
+                f"synthesize a concise, authoritative answer to the user's question. "
+                f"Strict zero-hallucination policy: do not invent anything outside the excerpts. "
+                f"Contrast perspectives where relevant and reference the experts by name.\n\n"
+                f"VERIFIED TRANSCRIPT EXCERPTS:\n" + "\n\n".join(context_snippets[:6]) + f"\n\n"
+                f"USER QUESTION: {query}\n\n"
+                f"EXECUTIVE SYNTHESIS:"
+            )
+            llm_result = self.generate_with_gemini(prompt)
+            if llm_result and len(llm_result) > 20:
+                return f"{llm_result}\n\n*(✨ Real-time synthesis generated via Gemini & grounded in verified transcripts)*"
 
         findings = []
         for spk, texts in expert_chunks.items():

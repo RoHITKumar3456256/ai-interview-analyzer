@@ -4,6 +4,12 @@ import time
 import argparse
 from pathlib import Path
 
+# Fix Windows console UTF-8 encoding for emojis
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
 def start_backend():
     print("🚀 Starting FastAPI backend on http://127.0.0.1:8000 ...")
     return subprocess.Popen(

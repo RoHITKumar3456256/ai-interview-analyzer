@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 from pathlib import Path
 import streamlit as st
 
@@ -13,6 +14,14 @@ from backend.chunker import chunker
 from backend.vector_store import vector_store
 from backend.rag_engine import rag_engine
 from backend.models import EvidenceQuote
+
+def stream_text(text: str):
+    """Real-time streaming text generator for interactive typing effect."""
+    words = text.split(" ")
+    for i, word in enumerate(words):
+        yield word + (" " if i < len(words) - 1 else "")
+        time.sleep(0.015)
+
 from frontend.components import (
     render_badge, render_grounding_pill, render_stat,
     render_evidence_quote, render_expert_stance_card,
@@ -75,19 +84,39 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-    st.markdown("#### ⚙️ Engine Settings")
+    st.markdown("#### ⚡ Real-Time Engine")
+    default_idx = 1 if (settings.GEMINI_API_KEY and settings.GEMINI_API_KEY.strip()) else 0
     llm_choice = st.selectbox(
         "Active LLM",
-        ["🔌 Local RAG (Offline/Free)", "✨ Google Gemini 1.5 Pro", "🤖 OpenAI GPT-4o"],
-        index=0, label_visibility="collapsed"
+        ["🔌 Local Grounded RAG (Zero-Cost)", "✨ Google Gemini 1.5 (Real-Time)", "🤖 OpenAI GPT-4o"],
+        index=default_idx, label_visibility="collapsed"
     )
     
     if "Gemini" in llm_choice:
-        key = st.text_input("Gemini API Key", type="password", placeholder="AIza...")
-        if key:
-            settings.GEMINI_API_KEY = key
+        gemini_input = st.text_input(
+            "Gemini API Key",
+            value=settings.GEMINI_API_KEY,
+            type="password",
+            placeholder="AIzaSy..."
+        )
+        if gemini_input != settings.GEMINI_API_KEY:
+            settings.GEMINI_API_KEY = gemini_input
             settings.DEFAULT_LLM_PROVIDER = "gemini"
-            rag_engine._init_llm_clients()
+            rag_engine.update_gemini_key(gemini_input)
+            
+        c_test, c_link = st.columns([1, 1])
+        with c_test:
+            if st.button("🔌 Test Key", use_container_width=True):
+                res = rag_engine.test_gemini_connection()
+                if res["status"] == "connected":
+                    st.success("✅ Connected to Gemini!")
+                elif res["status"] == "auth_error":
+                    st.warning("⚠️ Auth Error: Google AI Studio keys start with 'AIzaSy...'.")
+                else:
+                    st.info(f"Status: {res.get('message', 'Checked')}")
+        with c_link:
+            st.link_button("🔑 Free Key", "https://aistudio.google.com/app/apikey", use_container_width=True)
+
     elif "OpenAI" in llm_choice:
         key = st.text_input("OpenAI API Key", type="password", placeholder="sk-...")
         if key:
@@ -392,7 +421,7 @@ with tab3:
             with st.spinner("Retrieving & verifying from transcripts..."):
                 resp = rag_engine.chat_query(active, top_k=top_k)
 
-            st.markdown(resp.answer)
+            st.write_stream(stream_text(resp.answer))
 
             quotes_saved = []
             if resp.evidence_quotes:
