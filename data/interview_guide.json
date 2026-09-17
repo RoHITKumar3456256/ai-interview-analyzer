@@ -1,0 +1,36 @@
+{
+  "guide_title": "Enterprise Generative AI Adoption & ROI Qualitative Study",
+  "version": "1.0",
+  "questions": [
+    {
+      "id": "Q1",
+      "topic": "ROI Timelines & Payback Period",
+      "question": "What is the observed timeline and financial payback period for realizing measurable Return on Investment (ROI) from enterprise generative AI deployments?",
+      "target_themes": ["ROI timelines", "deployment speed", "early wins vs regulated sector horizons"]
+    },
+    {
+      "id": "Q2",
+      "topic": "Operational Bottlenecks & Failure Points",
+      "question": "What are the most significant operational, technical, and cultural bottlenecks preventing successful scaling of generative AI across organizations?",
+      "target_themes": ["legacy data hygiene", "inference cost & GPU compute", "EHR/system integration", "user skepticism"]
+    },
+    {
+      "id": "Q3",
+      "topic": "Build vs. Buy Architecture Strategy",
+      "question": "What strategy do leading organizations adopt regarding building custom in-house AI pipelines versus procuring commercial SaaS and managed cloud solutions?",
+      "target_themes": ["commodity infrastructure", "in-house evaluation and guardrails", "commercial SaaS traps vs advantages"]
+    },
+    {
+      "id": "Q4",
+      "topic": "Data Privacy, Security & Compliance Protocols",
+      "question": "What specific security guardrails, data scrubbing protocols, and compliance frameworks are enforced to prevent sensitive data and IP leakage?",
+      "target_themes": ["PII scrubbing/redaction", "HIPAA/banking compliance", "VPC isolation", "audit lineage"]
+    },
+    {
+      "id": "Q5",
+      "topic": "3-Year Outlook: Autonomous Agents vs. Copilots",
+      "question": "Over the next three years, how will enterprise adoption evolve between autonomous AI agents and human-in-the-loop copilot systems?",
+      "target_themes": ["autonomous agents", "copilots", "human oversight", "risk-sensitive domains vs DevOps automation"]
+    }
+  ]
+}

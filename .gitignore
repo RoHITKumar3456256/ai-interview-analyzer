@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Environment
+.env
+.env.*
+venv/
+.venv/
+env/
+ENV/
+
+# IDE & OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Chroma/FAISS local index
+chroma_db/
+*.faiss
+*.pkl
+*.index
+
+# Logs
+*.log
+logs/
+
+# Streamlit cache
+.streamlit/
+
+# Secrets & keys
+secrets.json
+*.pem
+*.key
