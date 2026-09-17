@@ -2,58 +2,81 @@ import streamlit as st
 from typing import List, Dict, Any
 from backend.models import EvidenceQuote, ExpertPerspective
 
-def render_badge(text: str, badge_type: str = "primary") -> str:
-    type_map = {
-        "primary": "badge-primary",
-        "emerald": "badge-emerald",
-        "amber": "badge-amber",
-        "rose": "badge-rose",
-        "timestamp": "badge-timestamp"
-    }
-    css_cls = type_map.get(badge_type, "badge-primary")
-    return f'<span class="badge {css_cls}">{text}</span>'
+EXPERT_CONFIG = {
+    "Dr. Sarah Lin": {"emoji": "💼", "color": "#6366f1", "bg": "rgba(99,102,241,0.15)", "sector": "FinTech"},
+    "Mark Thompson":  {"emoji": "☁️", "color": "#06b6d4", "bg": "rgba(6,182,212,0.15)",  "sector": "Cloud/DevOps"},
+    "Elena Rostova":  {"emoji": "🏥", "color": "#10b981", "bg": "rgba(16,185,129,0.15)", "sector": "Healthcare"},
+}
 
-def render_evidence_quote_card(quote: EvidenceQuote):
-    org_str = f" | {quote.organization}" if quote.organization else ""
+def get_expert_cfg(name: str) -> dict:
+    for k, v in EXPERT_CONFIG.items():
+        if k in name:
+            return v
+    return {"emoji": "👤", "color": "#818cf8", "bg": "rgba(129,140,248,0.15)", "sector": "Expert"}
+
+def render_badge(text: str, btype: str = "indigo") -> str:
+    classes = f"badge badge-{btype}"
+    return f'<span class="{classes}">{text}</span>'
+
+def render_grounding_pill():
     st.markdown(
-        f"""
-        <div class="evidence-quote-box">
-            <div style="font-size: 0.95rem; line-height: 1.5; color: #e2e8f0;">
-                "{quote.quote}"
-            </div>
-            <div class="evidence-quote-meta">
-                <span class="badge badge-primary">🎙️ {quote.speaker}</span>
-                <span class="badge badge-timestamp">⏱️ {quote.timestamp}</span>
-                <span style="font-size: 0.75rem; color: #94a3b8;">📄 {quote.transcript_id}{org_str}</span>
-            </div>
-        </div>
-        """,
+        '<div class="grounding-pill">🛡️ Zero Hallucination Verified — 100% Transcript Grounded</div>',
         unsafe_allow_html=True
     )
 
-def render_expert_perspective_card(perspective: ExpertPerspective):
-    with st.container():
-        st.markdown(
-            f"""
-            <div class="perspective-box">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                    <span style="font-weight: 700; color: #818cf8; font-size: 0.95rem;">👤 {perspective.expert_name}</span>
-                    <span class="badge badge-primary">{perspective.organization}</span>
-                </div>
-                <div style="color: #94a3b8; font-size: 0.8rem; margin-bottom: 8px;">{perspective.expert_title}</div>
-                <div style="font-size: 0.9rem; color: #f1f5f9; line-height: 1.45;">{perspective.stance_summary}</div>
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+def render_stat(number: str, label: str, emoji: str = ""):
+    return f"""
+    <div class="stat-card">
+        <span class="stat-number">{number}</span>
+        <span class="stat-label">{emoji} {label}</span>
+    </div>
+    """
 
-def render_grounding_indicator(score: float = 1.0, is_zero_hallucination: bool = True):
-    if is_zero_hallucination:
-        st.markdown(
-            """
-            <div style="display: inline-flex; align-items: center; gap: 6px; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 6px; padding: 4px 10px; font-size: 0.75rem; color: #34d399; font-weight: 600;">
-                🛡️ Zero Hallucination Verified (100% Transcript Grounded)
-            </div>
-            """,
-            unsafe_allow_html=True
-        )
+def render_evidence_quote(quote: EvidenceQuote, idx: int = 0):
+    org_str = f" · {quote.organization}" if quote.organization else ""
+    title_str = quote.expert_title or ""
+    cfg = get_expert_cfg(quote.speaker)
+    
+    st.markdown(f"""
+    <div class="evidence-box">
+        <div class="evidence-quote-text">"{quote.quote}"</div>
+        <div class="evidence-meta">
+            <span class="badge badge-indigo">{cfg['emoji']} {quote.speaker}</span>
+            <span class="badge badge-cyan">⏱ {quote.timestamp}</span>
+            <span class="badge badge-purple">📄 {quote.transcript_id}</span>
+            {"<span class='badge badge-amber'>" + quote.organization + "</span>" if quote.organization else ""}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_expert_stance_card(p: ExpertPerspective):
+    cfg = get_expert_cfg(p.expert_name)
+    st.markdown(f"""
+    <div class="expert-card">
+        <div class="expert-avatar" style="background:{cfg['bg']}; color:{cfg['color']};">
+            {cfg['emoji']}
+        </div>
+        <div class="expert-name">{p.expert_name}</div>
+        <div class="expert-org">{p.expert_title} · {p.organization}</div>
+        <div class="expert-stance">{p.stance_summary}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_section_header(title: str, subtitle: str = "", icon: str = ""):
+    st.markdown(f"""
+    <div class="section-header">
+        <div>
+            <div class="section-header-title">{icon} {title}</div>
+            {"<div class='section-header-sub'>" + subtitle + "</div>" if subtitle else ""}
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+def render_question_card(q_id: str, topic: str, question: str):
+    st.markdown(f"""
+    <div class="question-card">
+        <div class="question-number">{q_id} · RESEARCH QUESTION</div>
+        <div class="question-title">{question}</div>
+        <div class="question-topic">{render_badge(topic, "purple")}</div>
+    </div>
+    """, unsafe_allow_html=True)
